@@ -17,6 +17,11 @@ static BLEUUID    charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
 static boolean doConnect = false;
 static boolean isConnected = false;
 static boolean doScan = true;
+unsigned long dispTimer = 0;
+unsigned long timer1 = 0;
+static bool disp = false;
+static bool vibrating = false;
+unsigned int dispCount = 0;
 static char serverMessage[1000] = "defaultValue";
 static BLERemoteCharacteristic* pRemoteCharacteristic;
 static BLEAdvertisedDevice* braceletServer;
@@ -158,7 +163,7 @@ void setup()
   pBLEScan->setActiveScan(true);  
   pBLEScan->start(5, false);
   
-  
+  timer1 = millis();
 
   
 }
@@ -166,6 +171,34 @@ void setup()
 
 void loop()
 {
+  //Dispensing command received
+  if(disp)
+  {
+    if(dispTimer + 1000 <= millis())
+    {
+      if(vibrating)
+      {
+        analogWrite(LED1_PIN, 10);
+        analogWrite(MOTOR_PIN, 255/2);
+      }
+      else
+      {
+        analogWrite(LED1_PIN, 0);
+        analogWrite(MOTOR_PIN, 0);
+      }
+      vibrating = !vibrating;
+      dispCount++;
+      dispTimer = millis();
+    }
+    
+    if(dispCount >= 6)
+    {
+      analogWrite(LED1_PIN, 0);
+      analogWrite(MOTOR_PIN, 0);
+      disp = false;
+      dispCount = 0;
+    }
+  }
 
   /* If the flag "doConnect" is true, then we have scanned for and found the desired
      BLE Server with which we wish to connect.  Now we connect to it.  Once we are 
@@ -182,7 +215,6 @@ void loop()
     }
     doConnect = false;
   }
-  else   
 
   /* If we are connected to a peer BLE Server, update the characteristic each time we are reached
      with the current time since boot */
@@ -196,18 +228,12 @@ void loop()
     Serial.print("Received message from server: ");
     Serial.println(serverMessage);
 
-    if (String(serverMessage).equals("dispensing"))
+    if (!disp && String(serverMessage).equals("dispensing"))
     {
-      analogWrite(LED1_PIN, 10);
-      analogWrite(MOTOR_PIN, 255/2);
-    }
-    else 
-    {
-      analogWrite(LED1_PIN, 0);
-      analogWrite(MOTOR_PIN, 0);
-    }
-    
-  
+      vibrating = true;
+      dispTimer = millis();
+      disp = true;
+    }  
   }
 
   /* If we are not connected, and scanning is required */
@@ -218,6 +244,7 @@ void loop()
 //    Serial.println("Going to sleep now");
 //    if (doScan) esp_light_sleep_start();
   }
+
   
-  delay(2000); /* Delay a second between loops */
+//  delay(2000); /* Delay a second between loops */
 }
