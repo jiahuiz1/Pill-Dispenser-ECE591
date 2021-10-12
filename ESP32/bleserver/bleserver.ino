@@ -7,7 +7,7 @@
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-unsigned long time1;
+unsigned long time1, time2;
 bool disp = false;
 
 /* BLEServer *pServer = BLEDevice::createServer();
@@ -59,19 +59,35 @@ void setup()
   Serial.println("Characteristic defined! Now you can read it in the Client!");
   pCharacteristic->setValue("normal");
   time1 = millis();
+  time2 = time1;
+  pinMode(0,INPUT);
+  pinMode(2,OUTPUT);
 }
 
 void loop()
 {
-  if(time1 + 8000 <= millis())
+  if(disp == true && time1 + 3000 <= millis())
   {
-    if(!disp) pCharacteristic->setValue("dispensing");
-    else pCharacteristic->setValue("normal");
-    time1 = millis();
-    disp = !disp;
+    pCharacteristic->setValue("normal");
+    std::string value = pCharacteristic->getValue();
+    Serial.print("The new characteristic value is: ");
+    Serial.println(value.c_str());
+    digitalWrite(2,LOW);
+    disp = false;
   }
-  std::string value = pCharacteristic->getValue();
-  Serial.print("The new characteristic value is: ");
-  Serial.println(value.c_str());
-  delay(2000);
+
+  if(digitalRead(0) == false)
+  {    
+    pCharacteristic->setValue("dispensing");
+    std::string value = pCharacteristic->getValue();
+    Serial.print("The new characteristic value is: ");
+    Serial.println(value.c_str());
+    digitalWrite(2,HIGH);
+    
+    time1 = millis();
+    time2 = time1;
+    disp = true;
+  }
+  
+
 }
